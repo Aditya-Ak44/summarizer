@@ -137,23 +137,6 @@ npm install pdf-parse
 - Animated spinner with "Generating summary..." message
 - Shows during API processing
 
-## 🚀 Production Deployment
-
-1. **Build the project**:
-```bash
-npm run build
-```
-
-2. **Deploy to Vercel** (recommended for Next.js):
-```bash
-vercel deploy
-```
-
-**Important**: For production deployment with local Ollama, you'll need to either:
-- Keep Ollama running on a server with a stable IP
-- Use a cloud-hosted Ollama instance
-- Modify the API endpoint to use a cloud-based AI service (OpenAI, Anthropic, etc.)
-
 ## 📦 Dependencies
 
 - **Next.js 14+**: React framework with server-side rendering
