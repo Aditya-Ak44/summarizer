@@ -15,7 +15,7 @@ export function TextInput({ content, setContent }: TextInputProps) {
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="Paste article text, blog post, or any content here..."
-        className="w-full h-40 p-4 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none resize-none"
+        className="w-full h-40 p-4 border-2 border-black-900 rounded-lg focus:border-indigo-500 focus:outline-none resize-none text-black"
       />
     </div>
   );

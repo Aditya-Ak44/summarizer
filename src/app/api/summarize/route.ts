@@ -1,9 +1,8 @@
+// app/api/summarize/route.ts
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+const OLLAMA_MODEL = 'qwen2:7b';
 
 const summaryPrompts = {
   short: 'Summarize the following content in 2-3 sentences, capturing only the key points:',
@@ -22,42 +21,71 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return NextResponse.json(
-        { error: 'API key not configured' },
-        { status: 500 }
-      );
-    }
-
     const prompt = summaryPrompts[summaryLength as keyof typeof summaryPrompts] || summaryPrompts.medium;
     const fullPrompt = `${prompt}\n\n${content}`;
 
-    const stream = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'user',
-          content: fullPrompt,
-        },
-      ],
-      stream: true,
-      temperature: 0.7,
-      max_tokens: 500,
+    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        prompt: fullPrompt,
+        stream: true,
+        temperature: 0.7,
+      }),
     });
 
+    if (!response.ok) {
+      throw new Error(`Ollama API error: ${response.statusText}`);
+    }
+
     const encoder = new TextEncoder();
-    let buffer = '';
 
     const customReadable = new ReadableStream({
       async start(controller) {
         try {
-          for await (const chunk of stream) {
-            const delta = chunk.choices[0]?.delta?.content || '';
-            if (delta) {
-              buffer += delta;
-              controller.enqueue(encoder.encode(delta));
+          const reader = response.body?.getReader();
+          if (!reader) throw new Error('No response body');
+
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              if (line.trim()) {
+                try {
+                  const json = JSON.parse(line);
+                  if (json.response) {
+                    controller.enqueue(encoder.encode(json.response));
+                  }
+                } catch (e) {
+                  // Skip invalid JSON lines
+                }
+              }
             }
           }
+
+          // Process remaining buffer
+          if (buffer.trim()) {
+            try {
+              const json = JSON.parse(buffer);
+              if (json.response) {
+                controller.enqueue(encoder.encode(json.response));
+              }
+            } catch (e) {
+              // Skip invalid JSON
+            }
+          }
+
           controller.close();
         } catch (error) {
           controller.error(error);
@@ -73,7 +101,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Summarization error:', error);
     return NextResponse.json(
-      { error: 'Failed to summarize content' },
+      { error: 'Failed to summarize content. Make sure Ollama is running.' },
       { status: 500 }
     );
   }
