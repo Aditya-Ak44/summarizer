@@ -5,7 +5,7 @@ const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
 const OLLAMA_MODEL = 'qwen2:7b';
 
 const summaryPrompts = {
-  short: 'Summarize the following content in 2-3 sentences, capturing only the key points:',
+  short: 'Summarize the following content in 2-3 sentences, capturing only the key points in a structure of a summary text and few bullet points followed:',
   medium: 'Summarize the following content in 4-5 sentences, covering the main ideas and important details:',
   long: 'Summarize the following content in 8-10 sentences, including key points, supporting details, and conclusions:',
 };
